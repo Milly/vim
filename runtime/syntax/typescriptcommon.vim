@@ -77,7 +77,7 @@ syntax region  typescriptString
   \ contains=typescriptSpecial,@Spell
   \ extend
 
-syntax match   typescriptSpecial            contained "\v\\%(x\x\x|u%(\x{4}|\{\x{4,5}})|c\u|.)"
+syntax match   typescriptSpecial            contained "\v\\%(x\x\x|u%(\x{4}|\{\x{1,6}})|c\u|.)"
 
 " From vim runtime
 " <https://github.com/vim/vim/blob/master/runtime/syntax/javascript.vim#L48>
@@ -85,7 +85,7 @@ syntax region  typescriptRegexpString          start=+/[^/*]+me=e-1 skip=+\\\\\|
 
 syntax region  typescriptTemplate
   \ start=/`/  skip=/\\\\\|\\`\|\n/  end=/`\|$/
-  \ contains=typescriptTemplateSubstitution
+  \ contains=typescriptTemplateSubstitution,typescriptSpecial,@Spell
   \ nextgroup=@typescriptSymbols
   \ skipwhite skipempty
 
@@ -109,8 +109,10 @@ syntax match typescriptExponent /[eE][+-]\=\d[0-9]*\>/
 " runtime syntax/basic/object.vim
 syntax region  typescriptObjectLiteral         matchgroup=typescriptBraces
   \ start=/{/ end=/}/
-  \ contains=@typescriptComments,typescriptObjectLabel,typescriptStringProperty,typescriptComputedPropertyName
+  \ contains=@typescriptComments,typescriptObjectLabel,typescriptStringProperty,typescriptComputedPropertyName,typescriptObjectAsyncKeyword
   \ fold contained
+
+syntax keyword typescriptObjectAsyncKeyword async contained
 
 syntax match   typescriptObjectLabel  contained /\k\+\_s*/
   \ nextgroup=typescriptObjectColon,@typescriptCallImpl
@@ -360,13 +362,17 @@ syntax case match
 " Types
 syntax match typescriptOptionalMark /?/ contained
 
+syntax cluster typescriptTypeParameterCluster contains=
+  \ typescriptTypeParameter,
+  \ typescriptGenericDefault
+
 syntax region typescriptTypeParameters matchgroup=typescriptTypeBrackets
   \ start=/</ end=/>/
-  \ contains=typescriptTypeParameter
+  \ contains=@typescriptTypeParameterCluster
   \ contained
 
 syntax match typescriptTypeParameter /\K\k*/
-  \ nextgroup=typescriptConstraint,typescriptGenericDefault
+  \ nextgroup=typescriptConstraint
   \ contained skipwhite skipnl
 
 syntax keyword typescriptConstraint extends
@@ -1781,7 +1787,7 @@ syntax match   typescriptClassName             contained /\K\k*/
 
 syntax region typescriptClassTypeParameter
   \ start=/</ end=/>/
-  \ contains=typescriptTypeParameter
+  \ contains=@typescriptTypeParameterCluster
   \ nextgroup=typescriptClassBlock,typescriptClassExtends
   \ contained skipwhite skipnl
 
@@ -1813,7 +1819,7 @@ syntax match   typescriptInterfaceName             contained /\k\+/
   \ skipwhite skipnl
 syntax region typescriptInterfaceTypeParameter
   \ start=/</ end=/>/
-  \ contains=typescriptTypeParameter
+  \ contains=@typescriptTypeParameterCluster
   \ nextgroup=typescriptObjectType,typescriptInterfaceExtends
   \ contained
   \ skipwhite skipnl
@@ -2013,6 +2019,7 @@ hi def link typescriptMember              Function
 hi def link typescriptMethodAccessor       Operator
 
 hi def link typescriptAsyncFuncKeyword     Keyword
+hi def link typescriptObjectAsyncKeyword   Keyword
 hi def link typescriptAsyncFor             Keyword
 hi def link typescriptFuncKeyword          Keyword
 hi def link typescriptAsyncFunc            Keyword
