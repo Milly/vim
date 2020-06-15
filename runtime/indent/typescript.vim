@@ -67,8 +67,8 @@ let s:var_stmt = '^\s*var'
 let s:comma_first = '^\s*,'
 let s:comma_last = ',\s*$'
 
-let s:ternary = '^\s\+[?|:]'
-let s:ternary_q = '^\s\+?'
+let s:ternary = '^\s\+[?:]'
+let s:ternary_q = '^\s\+?[.?]\@!'
 
 " 2. Auxiliary Functions {{{1
 " ======================
@@ -464,7 +464,7 @@ function! Fixedgq(lnum, count)
     if l:count > 1
         while l:count > 1
             let l:count -= 1
-            normal J
+            normal! J
         endwhile
     endif
 
