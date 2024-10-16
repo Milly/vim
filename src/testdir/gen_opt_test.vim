@@ -190,6 +190,8 @@ let test_values = {
       \
       \ 'othernum': [[-1, 0, 100], ['']],
       \ 'otherstring': [['', 'xxx'], []],
+      \
+      \ 'notexistoption': [['xxx'], ['']],
       \}
 
 const invalid_options = test_values->keys()
