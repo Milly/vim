@@ -609,6 +609,9 @@ for g:testfunc in sort(s:tests)
     let g:max_run_nr = 10
   endif
 
+  " A test can set g:giveup_same_error to giving up due to the same error.
+  let g:giveup_same_error = 1
+
   let starttime = strftime("%H:%M:%S")
   call RunTheTest(g:testfunc)
 
@@ -627,7 +630,7 @@ for g:testfunc in sort(s:tests)
       call add(total_errors, $'Run {g:run_nr}, {starttime} - {endtime}:')
       call extend(total_errors, v:errors)
 
-      if g:run_nr >= g:max_run_nr || prev_error == v:errors[0]
+      if g:run_nr >= g:max_run_nr || g:giveup_same_error && prev_error == v:errors[0]
         call add(total_errors, 'Flaky test failed too often, giving up')
         let v:errors = total_errors
         break
