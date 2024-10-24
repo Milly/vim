@@ -642,7 +642,8 @@ for g:testfunc in sort(s:tests)
       " Flakiness is often caused by the system being very busy.  Sleep a
       " couple of seconds to have a higher chance of succeeding the second
       " time.
-      sleep 2
+      let delay = g:run_nr * 2
+      exe 'sleep' delay
 
       let prev_error = v:errors[0]
       let v:errors = []
