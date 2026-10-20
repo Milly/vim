@@ -10,6 +10,10 @@ PUSH "\x03"
 PUSH "\e[?15;2z"
   csi 0x7a L=3f 15,2
 
+!Unrecognised CSI with "=" leader
+PUSH "\e[=15;2z"
+  csi 0x7a L=3d 15,2
+
 !Unrecognised OSC
 PUSH "\e]27;Something\e\\"
   osc [27 "Something"]
