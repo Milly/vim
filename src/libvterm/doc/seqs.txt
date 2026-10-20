@@ -137,6 +137,10 @@ x = xterm
  23x   CSI " q          = DECSCA, select character attributes
 123x   CSI r            = DECSTBM
    x   CSI s            = DECSLRM
+       CSI > u          = kitty keyboard protocol, push flags
+       CSI < u          = kitty keyboard protocol, pop flags
+       CSI = u          = kitty keyboard protocol, set flags
+       CSI ? u          = kitty keyboard protocol, report flags
    x   CSI ' }          = DECIC
    x   CSI ' ~          = DECDC
 

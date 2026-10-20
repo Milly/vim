@@ -39,6 +39,16 @@
 #define BUFIDX_PRIMARY   0
 #define BUFIDX_ALTSCREEN 1
 
+// VIM: max depth of the kitty keyboard protocol flags stack, the protocol
+// does not specify the size
+#define KITTY_KEYBOARD_STACK_SIZE 8
+
+// VIM: kitty keyboard protocol flags stack, the current flags are on top
+typedef struct {
+  int flags[KITTY_KEYBOARD_STACK_SIZE];
+  int depth;
+} VTermKittyKeyboard;
+
 typedef struct VTermEncoding VTermEncoding;
 
 typedef struct {
@@ -131,7 +141,6 @@ struct VTermState
     unsigned int bracketpaste:1;
     unsigned int report_focus:1;
     unsigned int modify_other_keys:1;
-    unsigned int kitty_keyboard:1;
   } mode;
 
   VTermEncodingInstance encoding[4], encoding_utf8;
@@ -146,6 +155,13 @@ struct VTermState
   int bold_is_highbright;
 
   unsigned int protected_cell : 1;
+
+  // VIM: kitty keyboard protocol flags, a separate stack for the primary
+  // screen and the altscreen.
+  VTermKittyKeyboard kitty_keyboard[2];
+  // VIM: index of the kitty keyboard stack in use.  Like "lineinfo" it is
+  // only changed when switching screens, not by a reset.
+  int kitty_keyboard_bufidx;
 
   /* Saved state under DEC mode 1048/1049 */
   struct {
@@ -290,6 +306,7 @@ void vterm_state_resetpen(VTermState *state);
 void vterm_state_setpen(VTermState *state, const long args[], int argcount);
 int  vterm_state_getpen(VTermState *state, long args[], int argcount);
 void vterm_state_savepen(VTermState *state, int save);
+int  vterm_state_kitty_keyboard_flags(VTermState *state);
 
 enum {
   C1_SS3 = 0x8f,
