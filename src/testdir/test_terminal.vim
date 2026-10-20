@@ -2496,11 +2496,25 @@ endfunc
 
 func Test_terminal_disable_kitty_keyboard()
   CheckRunVimInTerminal
+  CheckUnix
+  CheckExecutable sh
   let cmd = ['sh', '-c', 'printf ''\033[>1u\033[?u\033[<u\033[?u''; sleep 1']
   let buf = term_start(cmd)
   let job = term_getjob(buf)
   call WaitForAssert({-> assert_equal('dead', job_status(job))})
   call WaitForAssert({-> assert_equal('^[[?1u^[[?0u', term_getline(buf, 1))})
+  bwipe!
+endfunc
+
+func Test_terminal_kitty_keyboard_altscreen()
+  CheckRunVimInTerminal
+  CheckUnix
+  CheckExecutable sh
+  let cmd = ['sh', '-c', 'printf ''\033[?1049h\033[>1u\033[?1049l\033[?u''; sleep 1']
+  let buf = term_start(cmd)
+  let job = term_getjob(buf)
+  call WaitForAssert({-> assert_equal('dead', job_status(job))})
+  call WaitForAssert({-> assert_equal('^[[?0u', term_getline(buf, 1))})
   bwipe!
 endfunc
 

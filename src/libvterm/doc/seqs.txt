@@ -139,6 +139,10 @@ x = xterm
    x   CSI s            = DECSLRM
    x   CSI ' }          = DECIC
    x   CSI ' ~          = DECDC
+   x   CSI > u          = kitty keyboard protocol, push flags
+   x   CSI < u          = kitty keyboard protocol, pop flags
+   x   CSI = u          = kitty keyboard protocol, set flags
+   x   CSI ? u          = kitty keyboard protocol, report flags
 
     OSCs
 

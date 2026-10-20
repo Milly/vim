@@ -993,6 +993,77 @@ static void request_dec_mode(VTermState *state, int num)
   vterm_push_output_sprintf_ctrl(state->vt, C1_CSI, "?%d;%d$y", num, reply ? 1 : 2);
 }
 
+// VIM: kitty keyboard protocol.  Only the "disambiguate escape codes" flag is
+// supported, other flags are dropped, so that a query reports what is used.
+#define KITTY_KEYBOARD_SUPPORTED_FLAGS 1
+
+static int kitty_keyboard_flags(VTermState *state)
+{
+  int bufidx = state->mode.alt_screen ? BUFIDX_ALTSCREEN : BUFIDX_PRIMARY;
+  int depth = state->kitty_keyboard[bufidx].depth;
+
+  if(depth == 0)
+    return 0;
+  return state->kitty_keyboard[bufidx].flags[depth - 1];
+}
+
+/*
+ * Update "mode.kitty_keyboard" from the flags of the current screen.
+ */
+static void kitty_keyboard_update(VTermState *state)
+{
+  state->mode.kitty_keyboard = (kitty_keyboard_flags(state) & 1) != 0;
+}
+
+static void kitty_keyboard_push(VTermState *state, int flags)
+{
+  int bufidx = state->mode.alt_screen ? BUFIDX_ALTSCREEN : BUFIDX_PRIMARY;
+  int *stack = state->kitty_keyboard[bufidx].flags;
+  int *depth = &state->kitty_keyboard[bufidx].depth;
+
+  if(*depth == KITTY_KEYBOARD_STACK_SIZE) {
+    // stack is full, evict the oldest entry
+    memmove(stack, stack + 1,
+                           (KITTY_KEYBOARD_STACK_SIZE - 1) * sizeof(stack[0]));
+    --*depth;
+  }
+  stack[(*depth)++] = flags & KITTY_KEYBOARD_SUPPORTED_FLAGS;
+  kitty_keyboard_update(state);
+}
+
+static void kitty_keyboard_pop(VTermState *state, int count)
+{
+  int bufidx = state->mode.alt_screen ? BUFIDX_ALTSCREEN : BUFIDX_PRIMARY;
+  int *depth = &state->kitty_keyboard[bufidx].depth;
+
+  *depth = count >= *depth ? 0 : *depth - count;
+  kitty_keyboard_update(state);
+}
+
+static void kitty_keyboard_set(VTermState *state, int flags, int mode)
+{
+  int bufidx = state->mode.alt_screen ? BUFIDX_ALTSCREEN : BUFIDX_PRIMARY;
+  int *stack = state->kitty_keyboard[bufidx].flags;
+  int *depth = &state->kitty_keyboard[bufidx].depth;
+  int cur;
+
+  if(mode < 1 || mode > 3)
+    return;
+
+  // with an empty stack the flags are set in a new entry
+  if(*depth == 0)
+    stack[(*depth)++] = 0;
+  cur = stack[*depth - 1];
+
+  switch(mode) {
+    case 1: cur = flags; break;           // set all flags
+    case 2: cur |= flags; break;          // set given flags
+    case 3: cur &= ~flags; break;         // reset given flags
+  }
+  stack[*depth - 1] = cur & KITTY_KEYBOARD_SUPPORTED_FLAGS;
+  kitty_keyboard_update(state);
+}
+
 static void request_version_string(VTermState *state)
 {
   vterm_push_output_sprintf_str(state->vt, C1_DCS, TRUE, ">|libvterm(%d.%d)",
@@ -1022,6 +1093,7 @@ static int on_csi(const char *leader, const long args[], int argcount, const cha
     case '?':
     case '>':
     case '<':
+    case '=':
       leader_byte = leader[0];
       break;
     default:
@@ -1487,35 +1559,30 @@ static int on_csi(const char *leader, const long args[], int argcount, const cha
 
   case LEADER('>', 0x6d): // CSI > 4 ; Pv m   xterm resource modifyOtherKeys
     if (argcount == 2 && CSI_ARG(args[0]) == 4)
-    {
-      // can't have both modify_other_keys and kitty_keyboard
-      state->mode.kitty_keyboard = 0;
-
+      // VIM: only mode 2 is supported, other modes disable it
       state->mode.modify_other_keys = CSI_ARG(args[1]) == 2;
-    }
     break;
 
-  case LEADER('>', 0x75): // CSI > 1 u  enable kitty keyboard protocol
-    if (argcount == 1 && CSI_ARG(args[0]) == 1)
-    {
-      // can't have both modify_other_keys and kitty_keyboard
-      state->mode.modify_other_keys = 0;
-
-      state->mode.kitty_keyboard = 1;
-    }
-    break;
-
-  case LEADER('<', 0x75): // CSI < u  disable kitty keyboard protocol
+  case LEADER('>', 0x75): // CSI > flags u  push kitty keyboard flags
     if (argcount <= 1)
-      state->mode.kitty_keyboard = 0;
+      kitty_keyboard_push(state, CSI_ARG_OR(args[0], 0));
+    break;
+
+  case LEADER('<', 0x75): // CSI < count u  pop kitty keyboard flags
+    if (argcount <= 1)
+      kitty_keyboard_pop(state, CSI_ARG_OR(args[0], 1));
+    break;
+
+  case LEADER('=', 0x75): // CSI = flags ; mode u  set kitty keyboard flags
+    if (argcount <= 2)
+      kitty_keyboard_set(state, CSI_ARG_OR(args[0], 0),
+                                   argcount == 2 ? CSI_ARG_OR(args[1], 1) : 1);
     break;
 
   case LEADER('?', 0x75): // CSI ? u  request kitty keyboard protocol state
     if (argcount <= 1)
-      // TODO: this only uses the values zero and one.  The protocol specifies
-      // more values, the progressive enhancement flags.
       vterm_push_output_sprintf_ctrl(state->vt, C1_CSI, "?%du",
-						   state->mode.kitty_keyboard);
+                                                  kitty_keyboard_flags(state));
     break;
 
   case 0x6e: // DSR - ECMA-48 8.3.35
@@ -2310,6 +2377,15 @@ void vterm_state_reset(VTermState *state, int hard)
 
   state->mouse_flags = 0;
 
+  // VIM: a hard reset clears the kitty keyboard flags, the protocol does not
+  // specify this.
+  if(hard) {
+    state->kitty_keyboard[BUFIDX_PRIMARY].depth = 0;
+    state->kitty_keyboard[BUFIDX_ALTSCREEN].depth = 0;
+  }
+  // "alt_screen" was reset, use the flags of the primary screen
+  kitty_keyboard_update(state);
+
   state->vt->mode.ctrl8bit   = 0;
 
   for(int col = 0; col < state->cols; col++)
@@ -2441,8 +2517,15 @@ int vterm_state_set_termprop(VTermState *state, VTermProp prop, VTermValue *val)
     state->mode.screen = val->boolean;
     return 1;
   case VTERM_PROP_ALTSCREEN:
+    // VIM: each screen has its own kitty keyboard flags
+    if(val->boolean && !state->mode.alt_screen)
+      // entering the altscreen starts with an empty stack, the protocol does
+      // not specify this
+      state->kitty_keyboard[BUFIDX_ALTSCREEN].depth = 0;
     state->mode.alt_screen = val->boolean;
-    state->lineinfo = state->lineinfos[state->mode.alt_screen ? BUFIDX_ALTSCREEN : BUFIDX_PRIMARY];
+    state->lineinfo = state->lineinfos[state->mode.alt_screen
+                                          ? BUFIDX_ALTSCREEN : BUFIDX_PRIMARY];
+    kitty_keyboard_update(state);
     if(state->mode.alt_screen) {
       VTermRect rect = {0, 0, 0, 0};
       rect.end_row = state->rows;

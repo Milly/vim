@@ -39,6 +39,10 @@
 #define BUFIDX_PRIMARY   0
 #define BUFIDX_ALTSCREEN 1
 
+// VIM: max depth of the kitty keyboard protocol flags stack, the protocol
+// does not specify the size
+#define KITTY_KEYBOARD_STACK_SIZE 8
+
 typedef struct VTermEncoding VTermEncoding;
 
 typedef struct {
@@ -146,6 +150,13 @@ struct VTermState
   int bold_is_highbright;
 
   unsigned int protected_cell : 1;
+
+  // VIM: kitty keyboard protocol flags, a separate stack for the primary
+  // screen and the altscreen.  The current flags are on top of the stack.
+  struct {
+    int flags[KITTY_KEYBOARD_STACK_SIZE];
+    int depth;
+  } kitty_keyboard[2];
 
   /* Saved state under DEC mode 1048/1049 */
   struct {

@@ -1,0 +1,180 @@
+INIT
+WANTSTATE
+
+!Push and pop
+RESET
+PUSH "\e[?u"
+  output "\e[?0u"
+INCHAR C 61
+  output "\x01"
+PUSH "\e[>1u\e[?u"
+  output "\e[?1u"
+INCHAR C 61
+  output "\e[97;5u"
+PUSH "\e[>0u\e[?u"
+  output "\e[?0u"
+INCHAR C 61
+  output "\x01"
+PUSH "\e[<u\e[?u"
+  output "\e[?1u"
+INCHAR C 61
+  output "\e[97;5u"
+PUSH "\e[<u\e[?u"
+  output "\e[?0u"
+INCHAR C 61
+  output "\x01"
+
+!Push without flags
+PUSH "\e[>1u\e[>u\e[?u"
+  output "\e[?0u"
+PUSH "\e[<u\e[?u"
+  output "\e[?1u"
+PUSH "\e[<u"
+
+!Pop more than pushed
+PUSH "\e[>1u\e[>1u\e[<5u\e[?u"
+  output "\e[?0u"
+PUSH "\e[<u\e[?u"
+  output "\e[?0u"
+
+!Full stack evicts the oldest entry
+PUSH "\e[>0u\e[>1u\e[>1u\e[>1u\e[>1u\e[>1u\e[>1u\e[>1u\e[>1u"
+PUSH "\e[<7u\e[?u"
+  output "\e[?1u"
+PUSH "\e[<u\e[?u"
+  output "\e[?0u"
+
+!Unsupported flags are dropped
+PUSH "\e[>31u\e[?u"
+  output "\e[?1u"
+INCHAR C 61
+  output "\e[97;5u"
+PUSH "\e[>30u\e[?u"
+  output "\e[?0u"
+INCHAR C 61
+  output "\x01"
+PUSH "\e[<2u"
+
+!Set flags
+PUSH "\e[=1u\e[?u"
+  output "\e[?1u"
+INCHAR C 61
+  output "\e[97;5u"
+PUSH "\e[=1;3u\e[?u"
+  output "\e[?0u"
+INCHAR C 61
+  output "\x01"
+PUSH "\e[=1;2u\e[?u"
+  output "\e[?1u"
+PUSH "\e[=0;1u\e[?u"
+  output "\e[?0u"
+PUSH "\e[=1u\e[=u\e[?u"
+  output "\e[?0u"
+PUSH "\e[=1;4u\e[?u"
+  output "\e[?0u"
+PUSH "\e[<u"
+
+!Set flags only changes the top entry
+PUSH "\e[>0u\e[>0u\e[=1u\e[?u"
+  output "\e[?1u"
+PUSH "\e[<u\e[?u"
+  output "\e[?0u"
+PUSH "\e[<u"
+
+!Set flags with an empty stack adds an entry
+PUSH "\e[=1u\e[<u\e[?u"
+  output "\e[?0u"
+
+!Separate stacks for the altscreen
+RESET
+PUSH "\e[>1u"
+PUSH "\e[?1049h\e[?u"
+  output "\e[?0u"
+INCHAR C 61
+  output "\x01"
+PUSH "\e[>1u\e[?u"
+  output "\e[?1u"
+PUSH "\e[?1049l\e[?u"
+  output "\e[?1u"
+INCHAR C 61
+  output "\e[97;5u"
+PUSH "\e[<u\e[?u"
+  output "\e[?0u"
+
+!Popping in the altscreen keeps the flags of the primary screen
+RESET
+PUSH "\e[>1u\e[?1049h\e[<u\e[=0u\e[?1049l\e[?u"
+  output "\e[?1u"
+INCHAR C 61
+  output "\e[97;5u"
+
+!Leaving the altscreen without popping
+RESET
+PUSH "\e[?1049h\e[>1u\e[?u"
+  output "\e[?1u"
+INCHAR C 61
+  output "\e[97;5u"
+PUSH "\e[?1049h\e[?u"
+  output "\e[?1u"
+PUSH "\e[?1049l\e[?u"
+  output "\e[?0u"
+INCHAR C 61
+  output "\x01"
+PUSH "\e[?1049h\e[?u"
+  output "\e[?0u"
+PUSH "\e[?1049l"
+
+!RIS clears the flags
+PUSH "\e[>1u\ec\e[?u"
+  output "\e[?0u"
+INCHAR C 61
+  output "\x01"
+
+!RIS in the altscreen clears the flags
+RESET
+PUSH "\e[>1u\e[?1049h\e[>1u\ec\e[?u"
+  output "\e[?0u"
+INCHAR C 61
+  output "\x01"
+
+!DECSTR in the altscreen uses the flags of the primary screen
+RESET
+PUSH "\e[>1u\e[?1049h\e[>0u\e[!p\e[?u"
+  output "\e[?1u"
+INCHAR C 61
+  output "\e[97;5u"
+
+!modifyOtherKeys does not clear the flags
+RESET
+PUSH "\e[>1u\e[>4;2m\e[?u"
+  output "\e[?1u"
+INCHAR C 61
+  output "\e[97;5u"
+PUSH "\e[?4m"
+  output "\e[>4;2m"
+PUSH "\e[<u\e[?u"
+  output "\e[?0u"
+INCHAR C 61
+  output "\e[27;5;97~"
+
+!modifyOtherKeys is kept when switching screens
+RESET
+PUSH "\e[>1u\e[?1049h\e[>4;2m"
+PUSH "\e[?1049l\e[?u"
+  output "\e[?1u"
+INCHAR C 61
+  output "\e[97;5u"
+PUSH "\e[?4m"
+  output "\e[>4;2m"
+PUSH "\e[?1049h\e[?u"
+  output "\e[?0u"
+INCHAR C 61
+  output "\e[27;5;97~"
+
+!Disabling modifyOtherKeys keeps the flags
+RESET
+PUSH "\e[>1u\e[>4;0m\e[?u"
+  output "\e[?1u"
+INCHAR C 61
+  output "\e[97;5u"
+PUSH "\e[<u"
