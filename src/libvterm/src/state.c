@@ -1558,7 +1558,11 @@ static int on_csi(const char *leader, const long args[], int argcount, const cha
     break;
 
   case LEADER('>', 0x6d): // CSI > 4 ; Pv m   xterm resource modifyOtherKeys
-    if (argcount == 2 && CSI_ARG(args[0]) == 4)
+    // CSI > 4 m and CSI > m reset modifyOtherKeys
+    if (argcount == 1
+                     && (CSI_ARG_IS_MISSING(args[0]) || CSI_ARG(args[0]) == 4))
+      state->mode.modify_other_keys = 0;
+    else if (argcount == 2 && CSI_ARG(args[0]) == 4)
       // VIM: only mode 2 is supported, other modes disable it
       state->mode.modify_other_keys = CSI_ARG(args[1]) == 2;
     break;
@@ -2377,8 +2381,9 @@ void vterm_state_reset(VTermState *state, int hard)
 
   state->mouse_flags = 0;
 
-  // VIM: a hard reset clears the kitty keyboard flags, the protocol does not
-  // specify this.
+  // VIM: like xterm, any reset restores modifyOtherKeys.  A hard reset also
+  // clears the kitty keyboard flags, the protocol does not specify this.
+  state->mode.modify_other_keys = 0;
   if(hard) {
     state->kitty_keyboard[BUFIDX_PRIMARY].depth = 0;
     state->kitty_keyboard[BUFIDX_ALTSCREEN].depth = 0;

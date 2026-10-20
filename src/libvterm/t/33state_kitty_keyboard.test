@@ -178,3 +178,39 @@ PUSH "\e[>1u\e[>4;0m\e[?u"
 INCHAR C 61
   output "\e[97;5u"
 PUSH "\e[<u"
+
+!DECSTR resets modifyOtherKeys but not the flags
+PUSH "\e[>4;2m\e[!p\e[?4m"
+  output "\e[>4;0m"
+PUSH "\e[>1u\e[!p\e[?u"
+  output "\e[?1u"
+
+!RIS resets modifyOtherKeys
+PUSH "\e[>4;2m\ec\e[?4m"
+  output "\e[>4;0m"
+
+!Reset modifyOtherKeys
+RESET
+PUSH "\e[>4;2m\e[>4m\e[?4m"
+  output "\e[>4;0m"
+PUSH "\e[>4;2m\e[>m\e[?4m"
+  output "\e[>4;0m"
+PUSH "\e[>4;2m\e[>4;m\e[?4m"
+  output "\e[>4;0m"
+PUSH "\e[>4;2m\e[>1m\e[?4m"
+  output "\e[>4;2m"
+
+!Only modifyOtherKeys mode 2 is enabled
+RESET
+PUSH "\e[>4;0m\e[?4m"
+  output "\e[>4;0m"
+INCHAR C 61
+  output "\x01"
+PUSH "\e[>4;1m\e[?4m"
+  output "\e[>4;0m"
+INCHAR C 61
+  output "\x01"
+PUSH "\e[>4;2m\e[?4m"
+  output "\e[>4;2m"
+INCHAR C 61
+  output "\e[27;5;97~"

@@ -2506,6 +2506,20 @@ func Test_terminal_disable_kitty_keyboard()
   bwipe!
 endfunc
 
+func Test_terminal_reset_modify_other_keys()
+  CheckRunVimInTerminal
+  CheckUnix
+  CheckExecutable sh
+  let cmd = ['sh', '-c', 'printf ''\033[>4;2m\033[?4m\033[>4m\033[?4m''; sleep 1']
+  let buf = term_start(cmd)
+  let job = term_getjob(buf)
+  call WaitForAssert({-> assert_equal('dead', job_status(job))})
+  call WaitForAssert({-> assert_equal('^[[>4;2m^[[>4;0m', term_getline(buf, 1))})
+  bwipe!
+endfunc
+
+" An application leaving the altscreen without popping the kitty keyboard
+" flags must not leave the protocol enabled for the primary screen.
 func Test_terminal_kitty_keyboard_altscreen()
   CheckRunVimInTerminal
   CheckUnix
