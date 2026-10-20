@@ -123,6 +123,10 @@ x = xterm
 123x   CSI ? l          = DECRM, DEC reset mode
 123x   CSI m            = SGR, Set Graphic Rendition
        CSI ? m          = DECSGR, private Set Graphic Rendition
+   x   CSI ? 4 m        = XTQMODKEYS, query modifyOtherKeys
+   x   CSI > m          = XTMODKEYS, reset modifyOtherKeys
+   x   CSI > 4 m        = XTMODKEYS, reset modifyOtherKeys
+   x   CSI > 4 ; Pv m   = XTMODKEYS, set modifyOtherKeys, only 2 enables it
 123x   CSI   n          = DSR, Device Status Report
  23x       5            =   operating status
  23x       6            =   CPR = cursor position
