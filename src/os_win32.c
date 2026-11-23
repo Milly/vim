@@ -4826,6 +4826,41 @@ mch_calc_cell_size(struct cellsize *cs_out)
 
 #endif
 
+/*
+ * Set $NoDefaultCurrentDirectoryInExePath, so that starting a process does
+ * not find an executable in the current directory.  This is respected by
+ * CreateProcess() and by cmd.exe.
+ * Returns the old value, to be passed to mch_restore_cwd_exe_search() with
+ * "*must_free".
+ */
+    char_u *
+mch_disable_cwd_exe_search(int *must_free)
+{
+    char_u	*oldval;
+
+    oldval = vim_getenv((char_u *)"NoDefaultCurrentDirectoryInExePath",
+								    must_free);
+    vim_setenv((char_u *)"NoDefaultCurrentDirectoryInExePath", (char_u *)"1");
+    return oldval;
+}
+
+/*
+ * Restore $NoDefaultCurrentDirectoryInExePath to "oldval", or unset it if
+ * "oldval" is NULL.  Frees "oldval" when "must_free" is TRUE.
+ */
+    void
+mch_restore_cwd_exe_search(char_u *oldval, int must_free)
+{
+    if (oldval != NULL)
+    {
+	vim_setenv((char_u *)"NoDefaultCurrentDirectoryInExePath", oldval);
+	if (must_free)
+	    vim_free(oldval);
+	return;
+    }
+    vim_unsetenv((char_u *)"NoDefaultCurrentDirectoryInExePath");
+}
+
     static BOOL
 vim_create_process(
     char		*cmd,
@@ -4838,6 +4873,8 @@ vim_create_process(
 {
     BOOL	ret = FALSE;
     WCHAR	*wcmd, *wcwd = NULL;
+    char_u	*oldval = NULL;
+    int		must_free = FALSE;
 
     wcmd = enc_to_utf16((char_u *)cmd, NULL);
     if (wcmd == NULL)
@@ -4849,6 +4886,10 @@ vim_create_process(
 	    goto theend;
     }
 
+    // Do not execute anything from the current directory.  Needed here for
+    // jobs and system() with a List, which do not go through
+    // mch_call_shell().
+    oldval = mch_disable_cwd_exe_search(&must_free);
     ret = CreateProcessW(
 	    NULL,		// Executable name
 	    wcmd,		// Command to execute
@@ -4860,6 +4901,7 @@ vim_create_process(
 	    wcwd,		// Current directory
 	    (LPSTARTUPINFOW)si,	// Startup information
 	    pi);		// Process information
+    mch_restore_cwd_exe_search(oldval, must_free);
 theend:
     vim_free(wcmd);
     vim_free(wcwd);
@@ -5562,22 +5604,6 @@ mch_call_shell_terminal(
     return retval;
 }
 #endif
-/* Restore a previous environment variable value, or unset it if NULL.
- * 'must_free' indicates whether 'old_value' was allocated.
- */
-    static void
-restore_env_var(char_u *name, char_u *old_value, int must_free)
-{
-    if (old_value != NULL)
-    {
-	vim_setenv(name, old_value);
-	if (must_free)
-	    vim_free(old_value);
-	return;
-    }
-    vim_unsetenv(name);
-}
-
 /*
  * Either execute a command by calling the shell or start a new shell
  */
@@ -5617,9 +5643,7 @@ mch_call_shell(
     }
     // do not execute anything from the current directory by setting the
     // environment variable $NoDefaultCurrentDirectoryInExePath
-    oldval = vim_getenv((char_u *)"NoDefaultCurrentDirectoryInExePath",
-	    &must_free);
-    vim_setenv((char_u *)"NoDefaultCurrentDirectoryInExePath", (char_u *)"1");
+    oldval = mch_disable_cwd_exe_search(&must_free);
 
     out_flush();
 
@@ -5653,8 +5677,7 @@ mch_call_shell(
 	    // Use a terminal window to run the command in.
 	    x = mch_call_shell_terminal(cmd, options);
 	    resettitle();
-	    restore_env_var((char_u *)"NoDefaultCurrentDirectoryInExePath",
-		    oldval, must_free);
+	    mch_restore_cwd_exe_search(oldval, must_free);
 	    return x;
 	}
     }
@@ -5880,8 +5903,7 @@ mch_call_shell(
     }
 
     // Restore original value of NoDefaultCurrentDirectoryInExePath
-    restore_env_var((char_u *)"NoDefaultCurrentDirectoryInExePath",
-	    oldval, must_free);
+    mch_restore_cwd_exe_search(oldval, must_free);
 
     if (tmode == TMODE_RAW)
     {

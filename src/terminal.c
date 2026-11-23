@@ -7346,6 +7346,9 @@ conpty_term_and_job_init(
     HANDLE	    i_ours = NULL;
     HANDLE	    o_ours = NULL;
     char	    *errmsg = NULL;
+    char_u	    *oldval = NULL;
+    int		    must_free = FALSE;
+    BOOL	    created = FALSE;
 
     ga_init2(&ga_cmd, sizeof(char*), 20);
     ga_init2(&ga_env, sizeof(char*), 20);
@@ -7451,11 +7454,15 @@ conpty_term_and_job_init(
     if (opt->jo_set & JO_IN_BUF)
 	job->jv_in_buf = buflist_findnr(opt->jo_io_buf[PART_IN]);
 
-    if (!CreateProcessW(NULL, cmd_wchar_copy, NULL, NULL, FALSE,
+    // Do not execute anything from the current directory.
+    oldval = mch_disable_cwd_exe_search(&must_free);
+    created = CreateProcessW(NULL, cmd_wchar_copy, NULL, NULL, FALSE,
 	    EXTENDED_STARTUPINFO_PRESENT | CREATE_UNICODE_ENVIRONMENT
 	    | CREATE_SUSPENDED | CREATE_DEFAULT_ERROR_MODE,
 	    env_wchar, cwd_wchar,
-	    &term->tl_siex.StartupInfo, &proc_info))
+	    &term->tl_siex.StartupInfo, &proc_info);
+    mch_restore_cwd_exe_search(oldval, must_free);
+    if (!created)
     {
 	errmsg = GetWin32Error();
 	goto failed;

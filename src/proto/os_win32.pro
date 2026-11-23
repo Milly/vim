@@ -50,6 +50,8 @@ void mch_set_shellsize(void);
 void mch_new_shellsize(void);
 void mch_set_winsize_now(void);
 void mch_calc_cell_size(struct cellsize *cs_out);
+char_u *mch_disable_cwd_exe_search(int *must_free);
+void mch_restore_cwd_exe_search(char_u *oldval, int must_free);
 int mch_call_shell(char_u *cmd, int options);
 void win32_build_env(dict_T *env, garray_T *gap, int is_terminal);
 char_u *mch_get_cmd_output_direct(char **argv, char_u *infile, int flags, int *ret_len);

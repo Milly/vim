@@ -178,6 +178,43 @@ func Test_windows_external_cmd_in_cwd()
   set guioptions&
 endfunc
 
+" Check that system() with a List and job_start() do not execute anything
+" from the current directory
+func Test_windows_direct_cmd_in_cwd()
+  CheckMSWindows
+
+  let save_env = $NoDefaultCurrentDirectoryInExePath
+  call setenv('NoDefaultCurrentDirectoryInExePath', v:null)
+
+  call mkdir('Xcwdexe', 'R')
+  cd Xcwdexe
+  " Any executable will do, it only must be found in the current directory.
+  call writefile(readblob($SystemRoot .. '\System32\hostname.exe'),
+        \ 'Xevil.exe')
+
+  " Using an explicit path works.
+  call assert_equal(tolower(hostname()), tolower(trim(system(['.\Xevil.exe']))))
+  call assert_equal(0, v:shell_error)
+
+  call assert_fails("call system(['Xevil'])", 'E475:')
+  call assert_fails("call systemlist(['Xevil'])", 'E475:')
+  if has('job')
+    let job1 = job_start('Xevil')
+    let job2 = job_start(['Xevil'])
+    call assert_equal('fail', job_status(job1))
+    call assert_equal('fail', job_status(job2))
+    " If a job did start, let it end, so that Xcwdexe can be deleted.
+    call WaitFor({-> job_status(job1) != 'run' && job_status(job2) != 'run'})
+  endif
+
+  " The environment variable is restored afterwards.
+  call assert_equal(v:null, getenv('NoDefaultCurrentDirectoryInExePath'))
+
+  cd -
+  call setenv('NoDefaultCurrentDirectoryInExePath',
+        \ empty(save_env) ? v:null : save_env)
+endfunc
+
 func Test_system_with_powershell()
   CheckPowerShell
 

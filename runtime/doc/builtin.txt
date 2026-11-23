@@ -1,4 +1,4 @@
-*builtin.txt*	For Vim version 9.2.  Last change: 2026 Nov 23
+*builtin.txt*	For Vim version 9.2.  Last change: 2026 Nov 28
 
 
 		  VIM REFERENCE MANUAL	  by Bram Moolenaar
@@ -2809,8 +2809,8 @@ executable({expr})					*executable()*
 		can be disabled by setting the
 		`$NoDefaultCurrentDirectoryInExePath` environment variable.
 		This variable is always set by Vim when executing external
-		commands (e.g., via |:!|, |:make|, or |system()|) for security
-		reasons.
+		commands (e.g., via |:!|, |:make|, |system()|, |job_start()|
+		or |term_start()|) for security reasons.
 
 		The result is a Number:
 			1	exists
