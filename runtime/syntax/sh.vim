@@ -317,15 +317,15 @@ syn cluster shForList	contains=shTestOpr,shNumber,shDerefSimple,shDeref,shComman
 " ====
 " This one is needed INSIDE a CommandSub, so that `echo bla` be correct
 if (exists("b:is_kornshell") && !exists("b:is_ksh88"))
-    syn region shEcho matchgroup=shStatement start="\<echo\>"  skip="\\$" matchgroup=shEchoDelim end="$" matchgroup=NONE end="[<>;&|()`}]"me=e-1 end="\d[<>]"me=e-2 end="#"me=e-1 end="\ze[ \t\n;]}" contains=@shEchoList skipwhite nextgroup=shQuickComment
-    syn region shEcho matchgroup=shStatement start="\<print\>" skip="\\$" matchgroup=shEchoDelim end="$" matchgroup=NONE end="[<>;&|()`}]"me=e-1 end="\d[<>]"me=e-2 end="#"me=e-1 end="\ze[ \t\n;]}" contains=@shEchoList skipwhite nextgroup=shQuickComment
+    syn region shEcho matchgroup=shStatement start="\<echo\>"  skip="\\$" matchgroup=shEchoDelim end="$" matchgroup=NONE end="[<>;&|()`}]"me=e-1 end="\d[<>]"me=e-2 end="\S\@1<!#"me=e-1 end="\ze[ \t\n;]}" contains=@shEchoList skipwhite nextgroup=shQuickComment
+    syn region shEcho matchgroup=shStatement start="\<print\>" skip="\\$" matchgroup=shEchoDelim end="$" matchgroup=NONE end="[<>;&|()`}]"me=e-1 end="\d[<>]"me=e-2 end="\S\@1<!#"me=e-1 end="\ze[ \t\n;]}" contains=@shEchoList skipwhite nextgroup=shQuickComment
 else
-    syn region shEcho matchgroup=shStatement start="\<echo\>"  skip="\\$" matchgroup=shEchoDelim end="$" matchgroup=NONE end="[<>;&|()`]"me=e-1 end="\d[<>]"me=e-2 end="#"me=e-1 contains=@shEchoList skipwhite nextgroup=shQuickComment
-    syn region shEcho matchgroup=shStatement start="\<print\>" skip="\\$" matchgroup=shEchoDelim end="$" matchgroup=NONE end="[<>;&|()`]"me=e-1 end="\d[<>]"me=e-2 end="#"me=e-1 contains=@shEchoList skipwhite nextgroup=shQuickComment
+    syn region shEcho matchgroup=shStatement start="\<echo\>"  skip="\\$" matchgroup=shEchoDelim end="$" matchgroup=NONE end="[<>;&|()`]"me=e-1 end="\d[<>]"me=e-2 end="\S\@1<!#"me=e-1 contains=@shEchoList skipwhite nextgroup=shQuickComment
+    syn region shEcho matchgroup=shStatement start="\<print\>" skip="\\$" matchgroup=shEchoDelim end="$" matchgroup=NONE end="[<>;&|()`]"me=e-1 end="\d[<>]"me=e-2 end="\S\@1<!#"me=e-1 contains=@shEchoList skipwhite nextgroup=shQuickComment
 endif
 if exists("b:is_kornshell") || exists("b:is_bash") || exists("b:is_posix")
-    syn region shEchoDeref contained matchgroup=shStatement start="\<echo\>"  skip="\\$" matchgroup=shEchoDelim end="$" end="[<>;&|()`}]"me=e-1 end="\d[<>]"me=e-2 end="#"me=e-1 contains=@shEchoList skipwhite nextgroup=shQuickComment
-    syn region shEchoDeref contained matchgroup=shStatement start="\<print\>" skip="\\$" matchgroup=shEchoDelim end="$" end="[<>;&|()`}]"me=e-1 end="\d[<>]"me=e-2 end="#"me=e-1 contains=@shEchoList skipwhite nextgroup=shQuickComment
+    syn region shEchoDeref contained matchgroup=shStatement start="\<echo\>"  skip="\\$" matchgroup=shEchoDelim end="$" end="[<>;&|()`}]"me=e-1 end="\d[<>]"me=e-2 end="\S\@1<!#"me=e-1 contains=@shEchoList skipwhite nextgroup=shQuickComment
+    syn region shEchoDeref contained matchgroup=shStatement start="\<print\>" skip="\\$" matchgroup=shEchoDelim end="$" end="[<>;&|()`}]"me=e-1 end="\d[<>]"me=e-2 end="\S\@1<!#"me=e-1 contains=@shEchoList skipwhite nextgroup=shQuickComment
 endif
 syn match  shEchoQuote contained	'\%(\\\\\)*\\["`'()]'
 
@@ -474,7 +474,7 @@ syn match   shEscape	contained	'\%(^\)\@!\%(\\\\\)*\\.'
 " systems too, however, so the following syntax will flag $(..) as
 " an Error under /bin/sh.  By consensus of vimdev'ers!
 if exists("b:is_kornshell") || exists("b:is_bash") || exists("b:is_posix")
-    syn region shCommandSub matchgroup=shCmdSubRegion start="\$((\@!"  skip='\\\\\|\\.' end=")"  contains=@shCommandSubList
+    syn region shCommandSub matchgroup=shCmdSubRegion start="\$((\@!"  skip='\\\\\|\\.' end=")"  contains=@shCommandSubList nextgroup=shExpansionHash
     if exists("b:is_kornshell")
         if !exists("b:is_ksh88")
             if exists("b:is_mksh")
@@ -490,13 +490,14 @@ if exists("b:is_kornshell") || exists("b:is_bash") || exists("b:is_posix")
         syn region shSubshare matchgroup=shCmdSubRegion start="\${\ze[ \t\n]"  skip='\\\\\|\\.' end="\zs[;\n][ \t\n]*}"  contains=@shCommandSubList
         syn region shValsub matchgroup=shCmdSubRegion start="\${|"  skip='\\\\\|\\.' end="[;\n][ \t\n]*}"  contains=@shCommandSubList
     endif
-    syn region shArithmetic matchgroup=shArithRegion  start="\$((" skip='\\\\\|\\.' end="))" contains=@shArithList
-    syn region shArithmetic matchgroup=shArithRegion  start="\$\[" skip='\\\\\|\\.' end="\]" contains=@shArithList
+    syn region shArithmetic matchgroup=shArithRegion  start="\$((" skip='\\\\\|\\.' end="))" contains=@shArithList nextgroup=shExpansionHash
+    syn region shArithmetic matchgroup=shArithRegion  start="\$\[" skip='\\\\\|\\.' end="\]" contains=@shArithList nextgroup=shExpansionHash
     syn match  shSkipInitWS contained	"^\s\+"
     syn region shArithParen matchgroup=shArithRegion  contained start="(" end=")" contains=@shArithParenList
 else
-    ShDefSynErrRule syn region shCommandSub matchgroup=Error start="\$(" end=")" contains=@shCommandSubList
+    ShDefSynErrRule syn region shCommandSub matchgroup=Error start="\$(" end=")" contains=@shCommandSubList nextgroup=shExpansionHash
 endif
+syn match  shExpansionHash contained transparent contains=NONE	"#"
 syn region shCmdParenRegion matchgroup=shCmdSubRegion start="((\@!" skip='\\\\\|\\.' end=")" contains=@shCommandSubList
 
 if exists("b:is_bash")
@@ -581,7 +582,7 @@ else
 endif
 syn match	shComment		"^\s*\zs#.*$"	contains=@shCommentGroup
 syn match	shComment		"\s\zs#.*$"	contains=@shCommentGroup
-syn match	shComment	contained	"#.*$"	contains=@shCommentGroup
+syn match	shComment	contained	"[^[:space:];&|()]\@1<!#.*$"	contains=@shCommentGroup
 syn match	shQuickComment	contained	"#.*$"          contains=@shCommentGroup
 syn match	shBQComment	contained	"#.\{-}\ze`"	contains=@shCommentGroup
 
